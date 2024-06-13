@@ -1,48 +1,53 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
 namespace MatUlohy {
     
     using Ukol1;
+    using Ukol2;
     using Ukol3;
     using Ukol4;
     
     internal class Program {
         public static void Main(string[] args) {
             {
-                Validation val = new Validation();
+                Console.WriteLine(Validation.Validate("jan.novak@mensagymnazium.cz")); // true
+                Console.WriteLine(Validation.Validate("petr.svoboda@gmail.com"));      // true
+                Console.WriteLine(Validation.Validate("anicka123@yahoo.co.uk"));       // true
+                Console.WriteLine(Validation.Validate("tomas@outlook.com"));           // true
+                Console.WriteLine(Validation.Validate("lucie.nova@seznam.cz"));        // true
+                Console.WriteLine(Validation.Validate("pavel_kral@centrum.cz"));       // true
+                Console.WriteLine(Validation.Validate("katka.mala123@volny.cz"));      // true
+                Console.WriteLine(Validation.Validate("michal@fit.cvut.cz"));          // true
+                Console.WriteLine(Validation.Validate("eva.novotna@mail.com"));        // true
+                Console.WriteLine(Validation.Validate("marta.svobodova@uni.edu"));     // true
+        
+                Console.WriteLine(Validation.Validate("jan.novak@mensagymnazium"));    // false
+                Console.WriteLine(Validation.Validate("petr.svoboda@gmail"));          // false
+                Console.WriteLine(Validation.Validate("@yahoo.co.uk"));                // false
+                Console.WriteLine(Validation.Validate("tomas@.com"));                  // false
+                Console.WriteLine(Validation.Validate("lucie.nova@seznam..cz"));       // false
+                Console.WriteLine(Validation.Validate("pavel_kral@.cz"));              // false
+                Console.WriteLine(Validation.Validate("katka.mala123volny.cz"));       // false
+                Console.WriteLine(Validation.Validate("michal@fit@cvut.cz"));          // false
+                Console.WriteLine(Validation.Validate("eva.novotnamail.com"));         // false
+                Console.WriteLine(Validation.Validate("marta.svobodova@uni..edu"));    // false
+            }
 
-                val._settings.ValidateDomain = true;
-                val._settings.ValidateEmail = false;
+            {        
+                var exchangeRates = new List<Tuple<string, string, double>> {
+                Tuple.Create("CZK", "EUR", 25.3),
+                Tuple.Create("CZK", "USD", 24.1),
+                Tuple.Create("EUR", "USD", 0.95),
+                Tuple.Create("USD", "JPY", 17.3),
+                Tuple.Create("HRK", "NOK", 0.25),
+                Tuple.Create("EUR", "NOK", 7.1)
+                };
 
-                val.AddDomain("centrum.cz");
-                val.AddDomain("seznam.cz");
-                val.AddDomain("gmail.com");
-
-                Console.WriteLine(val.Validate("adam@centrum.cz"));
-                Console.WriteLine(val.Validate("adam@yahoo.com"));
-
-                val._settings.ValidateEmail = true;
-
-                Console.WriteLine(val.Validate("adam@centrum.cz"));
-                Console.WriteLine(val.Validate("adam@yahoo.com"));
-
-                val.AddSet(new[]
-                { "adam@centrum.cz", "pepa@centrum.cz", "pepa@yahoo.cz" });
-
-                Console.WriteLine(val.Validate("adam@centrum.cz"));
-                Console.WriteLine(val.Validate("pepa@yahoo.cz"));
-                Console.WriteLine(val.Validate("pepa@mensa.cz"));
-
-                val.AddDomain("mensa.cz");
-
-                val._settings.ValidateDomain = false;
-
-                Console.WriteLine(val.Validate("adam@centrum.cz"));
-                Console.WriteLine(val.Validate("pepa@yahoo.cz"));
-                Console.WriteLine(val.Validate("pepa@mensa.cz"));
+                CurrencyExchange.Exchanges(exchangeRates, "CZK", "NOK");
             }
 
             {
@@ -76,84 +81,145 @@ namespace MatUlohy {
 }
 
 namespace Ukol1 {
-    class Validation {
-        public Settings _settings;
-
-        private List<string> domains;
-        private List<(string, List<string>)> emails;
-
-        public Validation() {
-            domains = new List<string>();
-            emails = new List<(string,  List<string>)>();
-        }
-        
-        public void AddSet(string[] set) {
-            foreach (var email in set) {
-                string[] emailSplit = email.Split('@');
-
-                if (emailSplit.Length != 2) 
-                    continue;
-                
-                if (emails.All(t => t.Item1 != emailSplit[1]))
-                    emails.Add((emailSplit[1], new List<string>()));
-
-                var tuple = emails.FirstOrDefault(t => t.Item1 == emailSplit[1]);
-                    if (!tuple.Item2.Contains(emailSplit[0]))
-                        tuple.Item2.Add(emailSplit[0]);
-            }
-
-            foreach (var line in emails) {
-                foreach (var a in line.Item2) {
-                    Console.Write(a + " ,");
-                }
-                
-                Console.WriteLine();
-            }
+    static class Validation {
+        public static bool Validate(string email) {
+            Console.Write(email + ": ");
+            bool isValid = S1(0, email);
+            Console.WriteLine(isValid);
+            return isValid;
         }
 
-        public void AddDomain(string domain) {
-            if (domains.Contains(domain))
-                return;
-            
-            domains.Add(domain);
-        }
-        
-        public bool Validate(string email) {
-            Console.Write($"email: {email} ");
-            string[] emailSplit = email.Split('@');
-
-            if (emailSplit.Length != 2)
+        private static bool S1(int p, string email) {
+            if (email.Length <= p)
                 return false;
 
-            if (emailSplit[1][emailSplit[1].Length - 3] != '.')
-                return false;
-            
-            if (_settings.ValidateDomain)
-                if (!domains.Contains(emailSplit[1]))
-                    return false;
+            if (char.IsLetter(email[p]) || char.IsNumber(email[p]))
+                return S2(p + 1, email);
 
-            if (_settings.ValidateEmail) {
-                if (emails.All(t => t.Item1 != emailSplit[1])) {
-                    return false;
-                }
-                else if (!emails.FirstOrDefault(t => t.Item1 == emailSplit[1]).Item2.Contains(emailSplit[0]))
-                    return false;
-            }
-
-            return true;
+            return false;
         }
-    }
 
+        private static bool S2(int p, string email) {
+            if (email.Length <= p)
+                return false;
 
-    public struct Settings {
-        public bool ValidateDomain;
-        public bool ValidateEmail;
+            if (email[p] == '.')
+                return S3(p + 1, email);
+
+            if (email[p] == '@')
+                return S6(p + 1, email);
+
+            if (char.IsLetter(email[p]) || char.IsNumber(email[p]))
+                return S2(p + 1, email);
+
+            return false;
+        }
+
+        private static bool S3(int p, string email) {
+            if (email.Length <= p)
+                return false;
+
+            if (char.IsLetter(email[p]) || char.IsNumber(email[p]))
+                return S2(p + 1, email);
+
+            return false;
+        }
+
+        private static bool S4(int p, string email, bool dot) {
+            if (email.Length <= p)
+                return dot;
+
+            if (email[p] == '.')
+                return S5(p + 1, email);
+
+            if (char.IsLetter(email[p]) || char.IsNumber(email[p]))
+                return S4(p + 1, email, dot);
+
+            return false;
+        }
+
+        private static bool S5(int p, string email) {
+            if (email.Length <= p)
+                return false;
+
+            if (char.IsLetter(email[p]) || char.IsNumber(email[p]))
+                return S4(p + 1, email, true);
+
+            return false;
+        }
+
+        private static bool S6(int p, string email) {
+            if (email.Length <= p)
+                return false;
+
+            if (char.IsLetter(email[p]) || char.IsNumber(email[p]))
+                return S4(p + 1, email, false);
+
+            return false;
+        }
+
     }
-    
 }
 
 namespace Ukol2 {
-    
+    public static class CurrencyExchange {
+        private static List<string> FindShortestExchangeSequence(
+            Dictionary<string, List<Tuple<string, double>>> exchangeRates, string startCurrency,
+            string targetCurrency) {
+            var queue = new Queue<List<string>>();
+            var visited = new HashSet<string>();
+
+            queue.Enqueue(new List<string>
+            { startCurrency });
+            visited.Add(startCurrency);
+
+            while (queue.Count > 0) {
+                var path = queue.Dequeue();
+                var lastCurrency = path.Last();
+
+                if (lastCurrency == targetCurrency) {
+                    return path;
+                }
+
+                if (!exchangeRates.ContainsKey(lastCurrency)) {
+                    continue;
+                }
+
+                foreach (var next in exchangeRates[lastCurrency]) {
+                    if (!visited.Contains(next.Item1)) {
+                        var newPath = new List<string>(path)
+                        { next.Item1 };
+                        queue.Enqueue(newPath);
+                        visited.Add(next.Item1);
+                    }
+                }
+            }
+
+            return null; // Neexistuje žádná cesta
+        }
+
+        public static void Exchanges(List<Tuple<string, string, double>> exchangeRates, string startCurrency, string targetCurrency) {
+            var exchangeRatesDict = new Dictionary<string, List<Tuple<string, double>>>();
+
+            foreach (var rate in exchangeRates) {
+                if (!exchangeRatesDict.ContainsKey(rate.Item1)) {
+                    exchangeRatesDict[rate.Item1] = new List<Tuple<string, double>>();
+                }
+
+                exchangeRatesDict[rate.Item1].Add(Tuple.Create(rate.Item2, rate.Item3));
+            }
+
+            var shortestSequence = FindShortestExchangeSequence(exchangeRatesDict, startCurrency, targetCurrency);
+
+            if (shortestSequence != null) {
+                Console.WriteLine("Nejkratší posloupnost směn:");
+                for (int i = 0; i < shortestSequence.Count - 1; i++) {
+                    Console.WriteLine($"[{shortestSequence[i]}, {shortestSequence[i + 1]}]");
+                }
+            } else 
+                Console.WriteLine("Nelze najít cestu mezi zadanými měnami.");
+        }
+    }
 }
 
 namespace Ukol3 {
